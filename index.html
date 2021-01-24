@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1.0">
+        <meta charset="UTF-8">
+        <title>
+            rock paper scissors
+        </title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.0.2/tailwind.min.css" integrity="sha512-+WF6UMXHki/uCy0vATJzyA9EmAcohIQuwpNz0qEO+5UeE5ibPejMRdFuARSrl1trs3skqie0rY/gNiolfaef5w==" crossorigin="anonymous" />"
+        <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
+    </head>
+    <body>
+        <div id="game">
+            <div class="bg-blue-900">
+                <div class="max-w-screen-xl px-4 py-12 mx-auto sm:px-6 lg:py-16 lg:px-8 lg:flex lg:items-center lg:justify-between">
+                     <h2 class="text-2xl font-extrabold leading-9 tracking-tight text-center text-gray-900 sm:text-4xl sm:leading-10">
+                        TeachableGame
+                        <br>
+                        <span class="text-center text-green-600">Rock Paper Scissor</span>
+                     </h2>
+                     <div class="flex mt-8 lg:flex-shrink-0 lg:mt-0">
+                         <div class="inline-flex rounded-md shadow">
+                             <a href="#" v-on:click="enableButton" id="enableButton" class="inline-flex items-center justify-center px-5 py-3 text-base font-medium leading-6 text-white transition duration-150 ease-in-out bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 focus:outline-none focus:shadow-outline">
+                                 Enable Camera
+                             </a>
+                         </div>
+                         <div class="inline-flex rounded-md shadow">
+                            <a href="#" v-on:click="playButton" id="playButton" class="inline-flex items-center justify-center hidden px-5 py-3 text-base font-medium leading-6 text-white transition duration-150 ease-in-out bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 focus:outline-none focus:shadow-outline">
+                                play game
+                            </a>
+                        </div>
+                        <div class="inline-flex rounded-md shadow">
+                            <a href="#" v-on:click="resetButton" id="resetButton" class="inline-flex items-center justify-center hidden px-5 py-3 text-base font-medium leading-6 text-white transition duration-150 ease-in-out bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 focus:outline-none focus:shadow-outline">
+                                reset
+                            </a>
+                        </div>
+                     </div>
+                </div>
+
+            </div>
+            <div class="h-full text-white bg-gray-900">
+                <div class="flex items-baseline h-full">
+      
+                    <!-- start human box --->
+                    <div class="items-center flex-1 px-4 py-2 m-2 text-base text-center text-gray-100 bg-gray-900">
+                        <h4 class="text-lg font-medium leading-6 text-gray-200">👤 Human score: {{ humanScore }} pts </h4>
+      
+                        <h1 class="mt-20 text-6xl" v-if="humanChoose === 0">👊</h1>
+                        <h1 class="mt-20 text-6xl" v-else-if="humanChoose === 1">🤚</h1>
+                        <h1 class="mt-20 text-6xl" v-else-if="humanChoose === 2">✌️</h1>
+                        <h1 class="mt-20 text-6xl" v-else></h1>
+      
+                        <p class="inline mt-20 text-center">
+                            <div id="webcam-container"></div>
+                            <div id="label-container"></div>
+                        </p>
+                    </div>
+                    <!-- end human box --->
+      
+                    <!-- start robot box --->
+                    <div class="items-center flex-1 px-4 py-2 m-2 text-base text-center text-gray-100 bg-gray-900">
+                        <h4 class="text-lg font-medium leading-6 text-gray-200">🤖 Robot score: {{ robotScore }} pts </h4>
+      
+                        <h1 class="mt-20 text-6xl" v-if="robotChoose === 0">👊</h1>
+                        <h1 class="mt-20 text-6xl" v-else-if="robotChoose === 1">🤚</h1>
+                        <h1 class="mt-20 text-6xl" v-else-if="robotChoose === 2">✌️</h1>
+                        <h1 class="mt-20 text-6xl" v-else></h1>
+      
+                        <p class="mt-20 text-center">
+                            <img class="inline text-center" src="img/robot-pngrepo-com.png" alt="Laracasts Sign Up Mascot">
+                        </p>
+                    </div>
+                    <!-- end robot box --->
+                </div>
+              </div>
+               <input hidden v-model="humanChoose" id="humanChoose">
+        </div>
+    </body>
+    <script type="text/javascript">
+
+        const URL = "https://teachablemachine.withgoogle.com/models/9tL0BvA6f/";
+    
+        let model, webcam, labelContainer, maxPredictions;
+    
+        // Load the image model and setup the webcam
+        async function init() 
+        {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+    
+            // Convenience function to setup a webcam
+            const flip = true; // whether to flip the webcam
+            webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
+            await webcam.setup(); // request access to the webcam
+            await webcam.play();
+    
+    
+            document.querySelector('#enableButton').classList.add("hidden");
+            document.querySelector('#playButton').classList.remove("hidden");
+            document.querySelector('#resetButton').classList.remove("hidden");
+            window.requestAnimationFrame(loop);
+    
+            // append elements to the DOM
+            document.getElementById("webcam-container").appendChild(webcam.canvas).setAttribute("class", "text-center inline border-solid border-8 border-indigo-900");
+    
+    
+            labelContainer = document.getElementById("label-container");
+            for (let i = 0; i < maxPredictions; i++) { // and class labels
+                labelContainer.appendChild(document.createElement("div"));
+            }
+        }
+    
+        async function loop() {
+            webcam.update(); // update the webcam frame
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+    
+        // run the webcam image through the image model
+        async function predict() {
+            // predict can take in an image, video or canvas html element
+            let sign = "";
+            const prediction = await model.predict(webcam.canvas);
+            for (let i = 0; i < maxPredictions; i++) 
+            {
+                if (prediction[i].className==0){sign="👊";}
+                else if (prediction[i].className==1){sign="🤚";}
+                else if (prediction[i].className==2){sign="✌️";}
+                else { sign = "none"; }
+    
+                if (prediction[i].probability.toFixed(2)>0.80)
+                {
+                    document.querySelector('#humanChoose').value=prediction[i].className;
+                }
+    
+                const classPrediction =
+                    sign + "  : " + prediction[i].probability.toFixed(2);
+                labelContainer.childNodes[i].innerHTML = classPrediction;
+            }
+        }
+    
+        // END teachablemachine code //
+    
+    
+        // START Vue JS + logic of the game code //
+        var game = new Vue({
+          el: '#game',
+          data: {
+             humanScore: 0,
+             humanChoose: '',
+             robotScore: 0,
+             robotChoose: ''
+          },
+    
+          methods: 
+          {
+              enableButton: function(){ init(); },
+    
+            playButton: function ()
+            {
+              // Reset Chooses
+              this.robotChoose=-1;
+              this.humanChoose=-1;
+              
+    
+              // lil delay
+              setTimeout(() => 
+              {  
+                    // Random robot sign
+                  this.robotChoose = Math.floor(Math.random() * 3);
+                  // Detect sign from human video
+                  this.humanChoose = parseInt(document.querySelector('#humanChoose').value);
+                  // Compare the output and increase score for the winner
+                  this.checkWinner();
+              }, 2000);
+            },
+    
+            // reset button
+            resetButton: function () 
+            {
+              this.humanScore=0;
+              this.robotScore=0;
+              this.robotChoose='';
+              this.humanChoose='';
+            },
+    
+            // check Winner
+            checkWinner: function () 
+            {
+              if ((this.robotChoose!=this.humanChoose) && (isNaN(this.humanChoose)==false))
+              { 
+                // List of values:
+                // 0 = Rock 
+                // 1 = Paper 
+                // 2 = Scissors
+    
+                // check who's winning
+                if (this.robotChoose==0 && this.humanChoose==1){ this.humanScore+=10;}
+                else if (this.robotChoose==0 && this.humanChoose==2){ this.robotScore+=10; }
+                else if (this.robotChoose==1 && this.humanChoose==2){ this.humanScore+=10; }
+                else if (this.humanChoose==0 && this.robotChoose==1){ this.robotScore+=10; }
+                else if (this.humanChoose==0 && this.robotChoose==2){ this.humanScore+=10; }
+                else if (this.humanChoose==1 && this.robotChoose==2){ this.robotScore+=10; }
+    
+                // Play sound
+                
+              }
+            }
+          }
+        })
+        // END Vue JS + logic of the game code //
+    </script>
+</html>
